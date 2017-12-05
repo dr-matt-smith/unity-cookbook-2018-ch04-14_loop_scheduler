@@ -3,68 +3,62 @@
 // source: adapted from sample code on the Unity script reference pages
 // https://docs.unity3d.com/ScriptReference/AudioSource.PlayScheduled.html
 
-[RequireComponent(typeof(AudioSource))]
-public class LoopScheduler : MonoBehaviour 
+public class LoopScheduler : MonoBehaviour
 {
+    // assume 140 bpm
     public float bpm = 140.0F;
-    public int numBeatsPerSegment = 16;
-    public AudioClip[] clips = new AudioClip[2];
 
-    public float timeBetweenClipsStarts = 2.0F;
+    // assume 16 beats per bar
+    public int numBeatsPerSegment = 16;
+
+    public AudioSource[] audioSources = new AudioSource[4];
 
     private double nextEventTime;
-    private AudioSource[] audioSources;
-    private bool running = false;
-
 
     private int nextLoopIndex = 0;
+
     private int numLoops;
+
+    // 60 seconds in a minute
+    private float numSecondsPerMinute = 60F;
+
+    // the time before the next clip starts to pl;ay
+    private float timeBetweenPlays;
+
 
     void Start()
     {
-        numLoops = clips.Length;
-        audioSources = new AudioSource[numLoops];
-        int i = 0;
-        while (i < numLoops)
-        {
-            GameObject child = new GameObject("Player");
-            child.transform.parent = gameObject.transform;
-            audioSources[i] = child.AddComponent<AudioSource>();
-            audioSources[i].clip = clips[i];
-            i++;
-        }
-        nextEventTime = AudioSettings.dspTime + timeBetweenClipsStarts;
-        running = true;
+        numLoops = audioSources.Length;
+        nextEventTime = AudioSettings.dspTime;
+        timeBetweenPlays = numSecondsPerMinute / bpm * numBeatsPerSegment;
     }
+
     void Update()
     {
-        if (!running)
-            return;
-
-        double time = AudioSettings.dspTime;
-        if (time + 1.0F > nextEventTime)
+        double lookAhead = AudioSettings.dspTime + 1.0F;
+        if (lookAhead > nextEventTime)
         {
             StartNextLoop();
         }
 
         PrintLoopPlayingStatus();
-}
+    }
 
     private void StartNextLoop()
     {
         audioSources[nextLoopIndex].PlayScheduled(nextEventTime);
-        Debug.Log("Scheduled source " + nextLoopIndex + " to start at time " + nextEventTime);
-        nextEventTime += 60.0F / bpm * numBeatsPerSegment;
+        nextEventTime += timeBetweenPlays;
 
         nextLoopIndex++;
-        if(nextLoopIndex >= numLoops){
+        if (nextLoopIndex >= numLoops)
+        {
             nextLoopIndex = 0;
         }
     }
 
     private void PrintLoopPlayingStatus()
     {
-        string statusMessage = "CLips playing:: ";
+        string statusMessage = "Sounds playing: ";
         int i = 0;
         while (i < numLoops)
         {
